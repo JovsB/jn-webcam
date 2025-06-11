@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import Webcam from "react-webcam";
+import GL from "glfx";
 
 const filters = [
 	{ name: "Normal", value: "none" },
@@ -724,7 +725,7 @@ export default function Home() {
     <button
       onClick={() => {
         if (!imgSrc) return;
-        const framePadding = 12; // px, adjust for border thickness
+        const framePadding = 12;
         const labelHeight = 36;
         const photoDrawWidth = FRAME_WIDTH - framePadding * 2;
         const photoDrawHeight = FRAME_HEIGHT - framePadding * 2;
@@ -732,64 +733,91 @@ export default function Home() {
         const img = new window.Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = FRAME_WIDTH;
-          canvas.height = FRAME_HEIGHT + labelHeight;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) return;
-
-          // Draw frame color
-          ctx.fillStyle = frameColor;
-          ctx.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT + labelHeight);
-
-          // Aspect ratio fit WITHIN the padded area
-          const imgAspect = img.width / img.height;
-          const frameAspect = photoDrawWidth / photoDrawHeight;
-          let drawWidth = photoDrawWidth,
-            drawHeight = photoDrawHeight,
-            offsetX = framePadding,
-            offsetY = framePadding;
-
-          if (imgAspect > frameAspect) {
-            drawWidth = photoDrawWidth;
-            drawHeight = photoDrawWidth / imgAspect;
-            offsetY += (photoDrawHeight - drawHeight) / 2;
-          } else {
-            drawHeight = photoDrawHeight;
-            drawWidth = photoDrawHeight * imgAspect;
-            offsetX += (photoDrawWidth - drawWidth) / 2;
+          // 1. Use glfx.js to process the image if "film" filter is selected
+          let processedImg = img;
+          if (selectedFilter === "film" && GL.isSupported) {
+            try {
+              const fxCanvas = GL.canvas();
+              const texture = fxCanvas.texture(img);
+              fxCanvas
+                .draw(texture)
+                .vignette(0.5, 0.8) // strong vignette
+                .hueSaturation(-0.08, 0.12) // slight green/yellow shift
+                .brightnessContrast(0.05, 0.18) // boost contrast, slight brightness
+                .noise(0.18) // heavy grain
+                .triangleBlur(1.2) // soft lens
+                .update();
+              // Create a new image from the processed canvas
+              processedImg = new window.Image();
+              processedImg.src = fxCanvas.toDataURL("image/jpeg");
+              processedImg.onload = drawToCanvas;
+              return;
+            } catch (e) {
+              // fallback to normal if glfx fails
+              processedImg = img;
+            }
           }
+          drawToCanvas();
 
-          ctx.filter = selectedFilter;
-          ctx.drawImage(
-            img,
-            0,
-            0,
-            img.width,
-            img.height,
-            offsetX,
-            offsetY,
-            drawWidth,
-            drawHeight
-          );
+          function drawToCanvas() {
+            const canvas = document.createElement("canvas");
+            canvas.width = FRAME_WIDTH;
+            canvas.height = FRAME_HEIGHT + labelHeight;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
 
-          // Draw label below image, inside frame
-          if (showLabel && labelText) {
-            ctx.font = "16px cursive";
-            ctx.fillStyle = "#888";
-            ctx.globalAlpha = 0.7;
-            ctx.textAlign = "center";
-            ctx.fillText(labelText, FRAME_WIDTH / 2, FRAME_HEIGHT + 24);
-            ctx.globalAlpha = 1;
+            // Draw frame color
+            ctx.fillStyle = frameColor;
+            ctx.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT + labelHeight);
+
+            // Aspect ratio fit WITHIN the padded area
+            const imgAspect = processedImg.width / processedImg.height;
+            const frameAspect = photoDrawWidth / photoDrawHeight;
+            let drawWidth = photoDrawWidth,
+              drawHeight = photoDrawHeight,
+              offsetX = framePadding,
+              offsetY = framePadding;
+
+            if (imgAspect > frameAspect) {
+              drawWidth = photoDrawWidth;
+              drawHeight = photoDrawWidth / imgAspect;
+              offsetY += (photoDrawHeight - drawHeight) / 2;
+            } else {
+              drawHeight = photoDrawHeight;
+              drawWidth = photoDrawHeight * imgAspect;
+              offsetX += (photoDrawWidth - drawWidth) / 2;
+            }
+
+            ctx.drawImage(
+              processedImg,
+              0,
+              0,
+              processedImg.width,
+              processedImg.height,
+              offsetX,
+              offsetY,
+              drawWidth,
+              drawHeight
+            );
+
+            // Draw label below image, inside frame
+            if (showLabel && labelText) {
+              ctx.font = "16px cursive";
+              ctx.fillStyle = "#888";
+              ctx.globalAlpha = 0.7;
+              ctx.textAlign = "center";
+              ctx.fillText(labelText, FRAME_WIDTH / 2, FRAME_HEIGHT + 24);
+              ctx.globalAlpha = 1;
+            }
+            const mime = downloadFormat === "png" ? "image/png" : "image/jpeg";
+            const dataUrl = canvas.toDataURL(mime);
+            const link = document.createElement("a");
+            link.href = dataUrl;
+            link.download = `photo.${downloadFormat}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
           }
-          const mime = downloadFormat === "png" ? "image/png" : "image/jpeg";
-          const dataUrl = canvas.toDataURL(mime);
-          const link = document.createElement("a");
-          link.href = dataUrl;
-          link.download = `photo.${downloadFormat}`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
         };
         img.src = imgSrc;
       }}
