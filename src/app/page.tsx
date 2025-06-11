@@ -724,37 +724,55 @@ export default function Home() {
     <button
       onClick={() => {
         if (!imgSrc) return;
+        const framePadding = 12; // px, adjust for border thickness
+        const labelHeight = 36;
+        const photoDrawWidth = FRAME_WIDTH - framePadding * 2;
+        const photoDrawHeight = FRAME_HEIGHT - framePadding * 2;
+
         const img = new window.Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
           const canvas = document.createElement("canvas");
           canvas.width = FRAME_WIDTH;
-          canvas.height = FRAME_HEIGHT + 36;
+          canvas.height = FRAME_HEIGHT + labelHeight;
           const ctx = canvas.getContext("2d");
           if (!ctx) return;
-          // Draw white frame
-          ctx.fillStyle = frameColor; // <-- use frameColor
-ctx.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT + 36);
-          // Aspect ratio fit
+
+          // Draw frame color
+          ctx.fillStyle = frameColor;
+          ctx.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT + labelHeight);
+
+          // Aspect ratio fit WITHIN the padded area
           const imgAspect = img.width / img.height;
-          const frameAspect = FRAME_WIDTH / FRAME_HEIGHT;
-          let drawWidth = FRAME_WIDTH,
-            drawHeight = FRAME_HEIGHT,
-            offsetX = 0,
-            offsetY = 0;
+          const frameAspect = photoDrawWidth / photoDrawHeight;
+          let drawWidth = photoDrawWidth,
+            drawHeight = photoDrawHeight,
+            offsetX = framePadding,
+            offsetY = framePadding;
+
           if (imgAspect > frameAspect) {
-            drawWidth = FRAME_WIDTH;
-            drawHeight = FRAME_WIDTH / imgAspect;
-            offsetX = 0;
-            offsetY = (FRAME_HEIGHT - drawHeight) / 2;
+            drawWidth = photoDrawWidth;
+            drawHeight = photoDrawWidth / imgAspect;
+            offsetY += (photoDrawHeight - drawHeight) / 2;
           } else {
-            drawHeight = FRAME_HEIGHT;
-            drawWidth = FRAME_HEIGHT * imgAspect;
-            offsetX = (FRAME_WIDTH - drawWidth) / 2;
-            offsetY = 0;
+            drawHeight = photoDrawHeight;
+            drawWidth = photoDrawHeight * imgAspect;
+            offsetX += (photoDrawWidth - drawWidth) / 2;
           }
+
           ctx.filter = selectedFilter;
-          ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            img.width,
+            img.height,
+            offsetX,
+            offsetY,
+            drawWidth,
+            drawHeight
+          );
+
           // Draw label below image, inside frame
           if (showLabel && labelText) {
             ctx.font = "16px cursive";
