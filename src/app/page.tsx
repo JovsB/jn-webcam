@@ -18,7 +18,6 @@ const FRAME_HEIGHT = 200;
 export default function Home() {
 	const webcamRef = useRef<Webcam>(null);
 	const [photos, setPhotos] = useState<(string | null)[]>([null, null, null]);
-	const [currentIndex, setCurrentIndex] = useState(0);
 	const [countdown, setCountdown] = useState<number | null>(null);
 	const [isCapturing, setIsCapturing] = useState(false);
 	const [selectedFilter, setSelectedFilter] = useState(filters[0].value);
@@ -33,7 +32,6 @@ export default function Home() {
 	// Photobooth capture logic
 	const startPhotobooth = async () => {
 		setPhotos([null, null, null]);
-		setCurrentIndex(0);
 		setIsCapturing(true);
 
 		for (let i = 0; i < 3; i++) {
@@ -53,7 +51,6 @@ export default function Home() {
 					return updated;
 				});
 			}
-			setCurrentIndex(i + 1);
 			await new Promise((res) => setTimeout(res, 500)); // Small pause between shots
 		}
 		setIsCapturing(false);
@@ -187,7 +184,7 @@ export default function Home() {
 							color: "#222",
 						}}
 					>
-						Jenny's Cameras
+						Jenny&apos;s Cameras
 					</h1>
 				</>
 			)}
@@ -471,7 +468,6 @@ export default function Home() {
 							onClick={() => {
 								setCameraActive(false);
 								setPhotos([null, null, null]);
-								setCurrentIndex(0);
 							}}
 							style={{
 								padding: "8px 20px",
