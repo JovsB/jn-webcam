@@ -642,337 +642,339 @@ export default function Home() {
 				</div>
 			)}
 			 
-			{mode === "single" && imgSrc && (
-  <div
-    style={{
-      marginTop: 32,
-      background: frameColor, // <-- use frameColor here
-      borderRadius: 16,
-      boxShadow: "0 2px 16px rgba(0,0,0,0.07)",
-      padding: 24,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      width: 260,
-    }}
-  >
-    <h3 style={{ fontWeight: 500, fontSize: 20, marginBottom: 16, color: "#222" }}>
-      Captured Photo
-    </h3>
-    {/* White frame with extra bottom for label */}
-    <div
-      style={{
-        background: "transparent", // keep transparent so outer frame shows
-        borderRadius: 8,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
-        width: FRAME_WIDTH,
-        height: FRAME_HEIGHT + 36,
-        marginBottom: 12,
-        position: "relative",
-        overflow: "hidden",
-        border: "2px solid #eee",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "flex-start",
-      }}
-    >
-      {/* Image with aspect ratio fit */}
-      <div
-        style={{
-          width: FRAME_WIDTH,
-          height: FRAME_HEIGHT,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#eee",
-        }}
-      >
-        <img
-          src={imgSrc}
-          alt="Captured"
-          style={{
-            maxWidth: FRAME_WIDTH,
-            maxHeight: FRAME_HEIGHT,
-            objectFit: "contain",
-            borderRadius: 4,
-            filter: selectedFilter,
-            display: "block",
-          }}
-        />
-      </div>
-      {/* Label below image, inside frame */}
-      {showLabel && (
+			{/* Single photo preview */}
+      {mode === "single" && imgSrc && (
         <div
           style={{
-            width: "100%",
-            textAlign: "center",
-            fontSize: 14,
-            color: "#888",
-            fontFamily: "cursive",
-            letterSpacing: 1,
-            opacity: 0.7,
-            userSelect: "none",
-            paddingTop: 8,
-            paddingBottom: 4,
-          }}
-        >
-          {labelText}
-        </div>
-      )}
-    </div>
-    {/* Download button for single image */}
-    <button
-      onClick={() => {
-        if (!imgSrc) return;
-        const framePadding = 12;
-        const labelHeight = 36;
-        const photoDrawWidth = FRAME_WIDTH - framePadding * 2;
-        const photoDrawHeight = FRAME_HEIGHT - framePadding * 2;
-
-        const img = new window.Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          // 1. Use glfx.js to process the image if "film" filter is selected
-          let processedImg = img;
-          if (selectedFilter === "film" && GL.isSupported) {
-            try {
-              const fxCanvas = GL.canvas();
-              const texture = fxCanvas.texture(img);
-              fxCanvas
-                .draw(texture)
-                .vignette(0.5, 0.8) // strong vignette
-                .hueSaturation(-0.08, 0.12) // slight green/yellow shift
-                .brightnessContrast(0.05, 0.18) // boost contrast, slight brightness
-                .noise(0.18) // heavy grain
-                .triangleBlur(1.2) // soft lens
-                .update();
-              // Create a new image from the processed canvas
-              processedImg = new window.Image();
-              processedImg.src = fxCanvas.toDataURL("image/jpeg");
-              processedImg.onload = drawToCanvas;
-              return;
-            } catch (e) {
-              // fallback to normal if glfx fails
-              processedImg = img;
-            }
-          }
-          drawToCanvas();
-
-          function drawToCanvas() {
-            const canvas = document.createElement("canvas");
-            canvas.width = FRAME_WIDTH;
-            canvas.height = FRAME_HEIGHT + labelHeight;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return;
-
-            // Draw frame color
-            ctx.fillStyle = frameColor;
-            ctx.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT + labelHeight);
-
-            // Aspect ratio fit WITHIN the padded area
-            const imgAspect = processedImg.width / processedImg.height;
-            const frameAspect = photoDrawWidth / photoDrawHeight;
-            let drawWidth = photoDrawWidth,
-              drawHeight = photoDrawHeight,
-              offsetX = framePadding,
-              offsetY = framePadding;
-
-            if (imgAspect > frameAspect) {
-              drawWidth = photoDrawWidth;
-              drawHeight = photoDrawWidth / imgAspect;
-              offsetY += (photoDrawHeight - drawHeight) / 2;
-            } else {
-              drawHeight = photoDrawHeight;
-              drawWidth = photoDrawHeight * imgAspect;
-              offsetX += (photoDrawWidth - drawWidth) / 2;
-            }
-
-            ctx.drawImage(
-              processedImg,
-              0,
-              0,
-              processedImg.width,
-              processedImg.height,
-              offsetX,
-              offsetY,
-              drawWidth,
-              drawHeight
-            );
-
-            // Draw label below image, inside frame
-            if (showLabel && labelText) {
-              ctx.font = "16px cursive";
-              ctx.fillStyle = "#888";
-              ctx.globalAlpha = 0.7;
-              ctx.textAlign = "center";
-              ctx.fillText(labelText, FRAME_WIDTH / 2, FRAME_HEIGHT + 24);
-              ctx.globalAlpha = 1;
-            }
-            const mime = downloadFormat === "png" ? "image/png" : "image/jpeg";
-            const dataUrl = canvas.toDataURL(mime);
-            const link = document.createElement("a");
-            link.href = dataUrl;
-            link.download = `photo.${downloadFormat}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-        };
-        img.src = imgSrc;
-      }}
-      style={{
-        padding: "8px 20px",
-        fontSize: 15,
-        borderRadius: 6,
-        border: "none",
-        background: "#222",
-        color: "#fff",
-        cursor: "pointer",
-        transition: "background 0.2s",
-      }}
-    >
-      Download Photo
-    </button>
-  </div>
-)}
-
-			{mode === "strip" && photos.some(Boolean) && (
-  <div
-    style={{
-      marginTop: 32,
-      background: frameColor, // <-- use frameColor here
-      borderRadius: 16,
-      boxShadow: "0 2px 16px rgba(0,0,0,0.07)",
-      padding: 24,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      width: 260,
-    }}
-  >
-    <h3
-      style={{
-        fontWeight: 500,
-        fontSize: 20,
-        marginBottom: 16,
-        color: "#222",
-      }}
-    >
-      Photobooth Strip
-    </h3>
-    {/* White frame with extra bottom for label */}
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 8,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
-        width: FRAME_WIDTH,
-        height: FRAME_HEIGHT * 3 + 36,
-        marginBottom: 12,
-        position: "relative",
-        overflow: "hidden",
-        border: "2px solid #eee",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "flex-start",
-      }}
-    >
-      {/* Render each photo */}
-      {photos.map((src, idx) => (
-        <div
-          key={idx}
-          style={{
-            width: FRAME_WIDTH,
-            height: FRAME_HEIGHT,
+            marginTop: 32,
+            background: frameColor,
+            borderRadius: 16,
+            boxShadow: "0 2px 16px rgba(0,0,0,0.07)",
+            padding: 24,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
-            background: "#fff",
-            marginBottom: idx !== photos.length - 1 ? 2 : 0,
+            width: 260,
           }}
         >
-          {src ? (
-            <img
-              src={src}
-              alt={`Photobooth ${idx + 1}`}
+          <h3 style={{ fontWeight: 500, fontSize: 20, marginBottom: 16, color: "#222" }}>
+            Captured Photo
+          </h3>
+          {/* White frame with extra bottom for label */}
+          <div
+            style={{
+              background: "transparent",
+              borderRadius: 8,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+              width: FRAME_WIDTH,
+              height: FRAME_HEIGHT + 36,
+              marginBottom: 12,
+              position: "relative",
+              overflow: "hidden",
+              border: "2px solid #eee",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "flex-start",
+            }}
+          >
+            {/* Image with aspect ratio fit */}
+            <div
               style={{
-                maxWidth: FRAME_WIDTH - 16, // leave some space for frame
-                maxHeight: FRAME_HEIGHT - 16,
-                objectFit: "contain",
-                borderRadius: 4,
-                filter: selectedFilter,
-                display: "block",
-                background: "#fff",
+                width: FRAME_WIDTH,
+                height: FRAME_HEIGHT,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#eee",
               }}
-            />
-          ) : (
-            <span style={{ color: "#bbb" }}>...</span>
-          )}
-        </div>
-      ))}
-      {/* Label below all images, inside frame */}
-      {showLabel && (
-        <div
-          style={{
-            width: "100%",
-            textAlign: "center",
-            fontSize: 14,
-            color: "#888",
-            fontFamily: "cursive",
-            letterSpacing: 1,
-            opacity: 0.7,
-            userSelect: "none",
-            paddingTop: 8,
-            paddingBottom: 4,
-            position: "absolute",
-            left: 0,
-            bottom: 0,
-            background: "transparent",
-          }}
-        >
-          {labelText}
+            >
+              <img
+                src={imgSrc}
+                alt="Captured"
+                style={{
+                  maxWidth: FRAME_WIDTH,
+                  maxHeight: FRAME_HEIGHT,
+                  objectFit: "contain",
+                  borderRadius: 4,
+                  filter: selectedFilter,
+                  display: "block",
+                }}
+              />
+            </div>
+            {/* Label below image, inside frame */}
+            {showLabel && (
+              <div
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  fontSize: 14,
+                  color: "#888",
+                  fontFamily: "cursive",
+                  letterSpacing: 1,
+                  opacity: 0.7,
+                  userSelect: "none",
+                  paddingTop: 8,
+                  paddingBottom: 4,
+                }}
+              >
+                {labelText}
+              </div>
+            )}
+          </div>
+          {/* Download button for single image */}
+          <button
+            onClick={() => {
+              if (!imgSrc) return;
+              const framePadding = 12;
+              const labelHeight = 36;
+              const photoDrawWidth = FRAME_WIDTH - framePadding * 2;
+              const photoDrawHeight = FRAME_HEIGHT - framePadding * 2;
+
+              const img = new window.Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => {
+                // 1. Use glfx.js to process the image if "film" filter is selected
+                let processedImg = img;
+                if (selectedFilter === "film" && GL.isSupported) {
+                  try {
+                    const fxCanvas = GL.canvas();
+                    const texture = fxCanvas.texture(img);
+                    fxCanvas
+                      .draw(texture)
+                      .vignette(0.5, 0.8)
+                      .hueSaturation(-0.08, 0.12)
+                      .brightnessContrast(0.05, 0.18)
+                      .noise(0.18)
+                      .triangleBlur(1.2)
+                      .update();
+                    // Create a new image from the processed canvas
+                    processedImg = new window.Image();
+                    processedImg.src = fxCanvas.toDataURL("image/jpeg");
+                    processedImg.onload = drawToCanvas;
+                    return;
+                  } catch (e) {
+                    // fallback to normal if glfx fails
+                    processedImg = img;
+                  }
+                }
+                drawToCanvas();
+
+                function drawToCanvas() {
+                  const canvas = document.createElement("canvas");
+                  canvas.width = FRAME_WIDTH;
+                  canvas.height = FRAME_HEIGHT + labelHeight;
+                  const ctx = canvas.getContext("2d");
+                  if (!ctx) return;
+
+                  // Draw frame color
+                  ctx.fillStyle = frameColor;
+                  ctx.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT + labelHeight);
+
+                  // Aspect ratio fit WITHIN the padded area
+                  const imgAspect = processedImg.width / processedImg.height;
+                  const frameAspect = photoDrawWidth / photoDrawHeight;
+                  let drawWidth = photoDrawWidth,
+                    drawHeight = photoDrawHeight,
+                    offsetX = framePadding,
+                    offsetY = framePadding;
+
+                  if (imgAspect > frameAspect) {
+                    drawWidth = photoDrawWidth;
+                    drawHeight = photoDrawWidth / imgAspect;
+                    offsetY += (photoDrawHeight - drawHeight) / 2;
+                  } else {
+                    drawHeight = photoDrawHeight;
+                    drawWidth = photoDrawHeight * imgAspect;
+                    offsetX += (photoDrawWidth - drawWidth) / 2;
+                  }
+
+                  ctx.drawImage(
+                    processedImg,
+                    0,
+                    0,
+                    processedImg.width,
+                    processedImg.height,
+                    offsetX,
+                    offsetY,
+                    drawWidth,
+                    drawHeight
+                  );
+
+                  // Draw label below image, inside frame
+                  if (showLabel && labelText) {
+                    ctx.font = "16px cursive";
+                    ctx.fillStyle = "#888";
+                    ctx.globalAlpha = 0.7;
+                    ctx.textAlign = "center";
+                    ctx.fillText(labelText, FRAME_WIDTH / 2, FRAME_HEIGHT + 24);
+                    ctx.globalAlpha = 1;
+                  }
+                  const mime = downloadFormat === "png" ? "image/png" : "image/jpeg";
+                  const dataUrl = canvas.toDataURL(mime);
+                  const link = document.createElement("a");
+                  link.href = dataUrl;
+                  link.download = `photo.${downloadFormat}`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }
+              };
+              img.src = imgSrc;
+            }}
+            style={{
+              padding: "8px 20px",
+              fontSize: 15,
+              borderRadius: 6,
+              border: "none",
+              background: "#222",
+              color: "#fff",
+              cursor: "pointer",
+              transition: "background 0.2s",
+            }}
+          >
+            Download Photo
+          </button>
         </div>
       )}
-    </div>
-    {/* Download options for strip */}
-    <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
-      <select
-        value={downloadFormat}
-        onChange={e => setDownloadFormat(e.target.value as "jpg" | "png")}
-        style={{
-          padding: "6px 12px",
-          borderRadius: 6,
-          border: "1px solid #ddd",
-          fontSize: 15,
-          background: "#fafbfc",
-          color: "#222",
-          outline: "none",
-        }}
-      >
-        <option value="jpg">JPG</option>
-        <option value="png">PNG</option>
-      </select>
-      <button
-        onClick={handleDownloadStrip}
-        style={{
-          padding: "8px 20px",
-          fontSize: 15,
-          borderRadius: 6,
-          border: "none",
-          background: "#222",
-          color: "#fff",
-          cursor: "pointer",
-          transition: "background 0.2s",
-        }}
-        disabled={photos.some(p => !p)}
-      >
-        Download Strip
-      </button>
-    </div>
-  </div>
-)}
-		</main>
-	);
+
+      {/* Photobooth strip preview and download (only when mode is strip) */}
+      {mode === "strip" && photos.some(Boolean) && (
+        <div
+          style={{
+            marginTop: 32,
+            background: frameColor,
+            borderRadius: 16,
+            boxShadow: "0 2px 16px rgba(0,0,0,0.07)",
+            padding: 24,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            width: 260,
+          }}
+        >
+          <h3
+            style={{
+              fontWeight: 500,
+              fontSize: 20,
+              marginBottom: 16,
+              color: "#222",
+            }}
+          >
+            Photobooth Strip
+          </h3>
+          {/* White frame with extra bottom for label */}
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 8,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+              width: FRAME_WIDTH,
+              height: FRAME_HEIGHT * 3 + 36,
+              marginBottom: 12,
+              position: "relative",
+              overflow: "hidden",
+              border: "2px solid #eee",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "flex-start",
+            }}
+          >
+            {/* Render each photo */}
+            {photos.map((src, idx) => (
+              <div
+                key={idx}
+                style={{
+                  width: FRAME_WIDTH,
+                  height: FRAME_HEIGHT,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#fff",
+                  marginBottom: idx !== photos.length - 1 ? 2 : 0,
+                }}
+              >
+                {src ? (
+                  <img
+                    src={src}
+                    alt={`Photobooth ${idx + 1}`}
+                    style={{
+                      maxWidth: FRAME_WIDTH - 16,
+                      maxHeight: FRAME_HEIGHT - 16,
+                      objectFit: "contain",
+                      borderRadius: 4,
+                      filter: selectedFilter,
+                      display: "block",
+                      background: "#fff",
+                    }}
+                  />
+                ) : (
+                  <span style={{ color: "#bbb" }}>...</span>
+                )}
+              </div>
+            ))}
+            {/* Label below all images, inside frame */}
+            {showLabel && (
+              <div
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  fontSize: 14,
+                  color: "#888",
+                  fontFamily: "cursive",
+                  letterSpacing: 1,
+                  opacity: 0.7,
+                  userSelect: "none",
+                  paddingTop: 8,
+                  paddingBottom: 4,
+                  position: "absolute",
+                  left: 0,
+                  bottom: 0,
+                  background: "transparent",
+                }}
+              >
+                {labelText}
+              </div>
+            )}
+          </div>
+          {/* Download options for strip */}
+          <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+            <select
+              value={downloadFormat}
+              onChange={e => setDownloadFormat(e.target.value as "jpg" | "png")}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 6,
+                border: "1px solid #ddd",
+                fontSize: 15,
+                background: "#fafbfc",
+                color: "#222",
+                outline: "none",
+              }}
+            >
+              <option value="jpg">JPG</option>
+              <option value="png">PNG</option>
+            </select>
+            <button
+              onClick={handleDownloadStrip}
+              style={{
+                padding: "8px 20px",
+                fontSize: 15,
+                borderRadius: 6,
+                border: "none",
+                background: "#222",
+                color: "#fff",
+                cursor: "pointer",
+                transition: "background 0.2s",
+              }}
+              disabled={photos.some(p => !p)}
+            >
+              Download Strip
+            </button>
+          </div>
+        </div>
+      )}
+    </main>
+  );
 }
